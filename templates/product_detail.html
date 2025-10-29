@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+
+{% block title %}{{ product.name }} - Flask Ecommerce{% endblock %}
+
+{% block content %}
+<div class="product-detail">
+    <div>
+        <img src="{{ product.image }}" alt="{{ product.name }}" class="product-detail-image">
+    </div>
+    <div class="product-detail-info">
+        <h1>{{ product.name }}</h1>
+        <div class="product-detail-price">${{ "%.2f"|format(product.price) }}</div>
+        <div class="rating">
+            <span class="stars">★★★★★</span>
+            <span>{{ product.rating }}/5</span>
+        </div>
+        <p>{{ product.description }}</p>
+        <p><strong>Category:</strong> {{ product.category }}</p>
+        <p><strong>In Stock:</strong> {{ 'Yes' if product.in_stock else 'No' }}</p>
+        
+        <div style="margin-top: 2rem;">
+            <label for="quantity">Quantity:</label>
+            <select id="quantity" style="margin: 0 1rem; padding: 0.5rem;">
+
+                <option value="1">1</option>
+                <option value="2">2</option>
+                <option value="3">3</option>
+                <option value="4">4</option>
+                <option value="5">5</option>
+            </select>
+        </div>
+        
+        <div style="margin-top: 2rem;">
+            <button class="btn" onclick="addToCartFromDetail({{ product.id }})">
+                Add to Cart
+            </button>
+            <a href="/" class="btn btn-secondary">Back to Catalog</a>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function addToCartFromDetail(productId) {
+    const quantity = parseInt(document.getElementById('quantity').value);
+    cartManager.addToCart(productId, quantity);
+}
+</script>
+{% endblock %}

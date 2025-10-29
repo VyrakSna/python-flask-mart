@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Invoice - SU4.13 Shop</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Arial', sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background-color: #f4f4f4;
+            padding: 20px;
+        }
+
+        .invoice-container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: 0 0 20px rgba(0,0,0,0.1);
+        }
+
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 40px 30px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            font-weight: bold;
+        }
+
+        .header p {
+            font-size: 1.2em;
+            opacity: 0.9;
+        }
+
+        .content {
+            padding: 40px 30px;
+        }
+
+        .invoice-details {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 40px;
+            flex-wrap: wrap;
+        }
+
+        .invoice-info, .customer-info {
+            flex: 1;
+            min-width: 300px;
+        }
+
+        .invoice-info {
+            margin-right: 20px;
+        }
+
+        .info-section h3 {
+            color: #667eea;
+            margin-bottom: 15px;
+            font-size: 1.3em;
+            border-bottom: 2px solid #667eea;
+            padding-bottom: 5px;
+        }
+
+        .info-section p {
+            margin-bottom: 8px;
+            padding: 5px 0;
+        }
+
+        .info-section strong {
+            color: #333;
+            display: inline-block;
+            min-width: 80px;
+        }
+
+        .items-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 30px 0;
+            background: white;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+
+        .items-table thead {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .items-table th,
+        .items-table td {
+            padding: 15px;
+            text-align: left;
+            border-bottom: 1px solid #eee;
+        }
+
+        .items-table th {
+            font-weight: bold;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            font-size: 0.9em;
+        }
+
+        .items-table tbody tr:hover {
+            background-color: #f8f9ff;
+        }
+
+        .items-table tbody tr:last-child td {
+            border-bottom: none;
+        }
+
+        .text-right {
+            text-align: right;
+        }
+
+        .shipping-row {
+            background-color: #f8f9ff;
+            font-weight: bold;
+        }
+
+        .separator-row {
+            background: linear-gradient(90deg, #667eea, #764ba2);
+            height: 3px;
+        }
+
+        .separator-row td {
+            padding: 0;
+            border: none;
+        }
+
+        .total-row {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            font-weight: bold;
+            font-size: 1.2em;
+        }
+
+        .total-row td {
+            border-bottom: none;
+        }
+
+        .footer {
+            background-color: #f8f9ff;
+            padding: 30px;
+            text-align: center;
+            border-top: 3px solid #667eea;
+        }
+
+        .footer h3 {
+            color: #667eea;
+            margin-bottom: 15px;
+        }
+
+        .footer p {
+            color: #666;
+            margin-bottom: 10px;
+        }
+
+        .thank-you {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            text-align: center;
+            font-size: 1.1em;
+            font-weight: bold;
+        }
+
+        .currency {
+            font-weight: bold;
+            color: #667eea;
+        }
+
+        @media (max-width: 600px) {
+            .invoice-details {
+                flex-direction: column;
+            }
+
+            .invoice-info {
+                margin-right: 0;
+                margin-bottom: 20px;
+            }
+
+            .items-table {
+                font-size: 0.9em;
+            }
+
+            .items-table th,
+            .items-table td {
+                padding: 10px 8px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="invoice-container">
+        <div class="header">
+            <h1>FlaskMart SHOP</h1>
+            <p>Invoice & Order Confirmation</p>
+        </div>
+
+        <div class="content">
+            <div class="invoice-details">
+                <div class="invoice-info info-section">
+                    <h3>Invoice Details</h3>
+                    <p><strong>Status:</strong> <span style="color: #28a745; font-weight: bold;">Confirmed</span></p>
+                </div>
+
+                <div class="customer-info info-section">
+                    <h3>Bill To</h3>
+                    <p><strong>Name:</strong> {{ name }}</p>
+                    <p><strong>Email:</strong> {{ email }}</p>
+                    <p><strong>Phone:</strong> {{ phone }}</p>
+                    <p><strong>Address:</strong> {{ address }}</p>
+                    <p><strong>City:</strong> {{ full_address.city }}</p>
+                    {% if full_address.state %}
+                    <p><strong>State:</strong> {{ full_address.state }}</p>
+                    {% endif %}
+                    {% if full_address.zipCode %}
+                    <p><strong>ZIP Code:</strong> {{ full_address.zipCode }}</p>
+                    {% endif %}
+                    {% if full_address.country %}
+                    <p><strong>Country:</strong> {{ full_address.country }}</p>
+                    {% endif %}
+                    {% if notes %}
+                    <p><strong>Notes:</strong> {{ notes }}</p>
+                    {% endif %}
+                </div>
+            </div>
+
+            <table class="items-table">
+                <thead>
+                    <tr>
+                        <th>Product Name</th>
+                        <th>Price</th>
+                        <th>Quantity</th>
+                        <th class="text-right">Subtotal</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in items %}
+                    <tr>
+                        <td>{{ item.name }}</td>
+                        <td class="currency">${{ "%.2f"|format(item.price) }}</td>
+                        <td>{{ item.quantity }}</td>
+                        <td class="text-right currency">${{ "%.2f"|format(item.price * item.quantity) }}</td>
+                    </tr>
+                    {% endfor %}
+
+                    <tr class="shipping-row">
+                        <td colspan="3"><strong>Shipping</strong></td>
+                        <td class="text-right currency"><strong>${{ "%.2f"|format(totals.shipping) }}</strong></td>
+                    </tr>
+
+                    <tr class="separator-row">
+                        <td colspan="4"></td>
+                    </tr>
+
+                    <tr class="total-row">
+                        <td colspan="3"><strong>TOTAL</strong></td>
+                        <td class="text-right"><strong>${{ "%.2f"|format(totals.total) }}</strong></td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <div class="footer">
+            <h3>Order Information</h3>
+            <p>Your order has been successfully placed and is being processed.</p>
+            <p>You will receive a shipping confirmation email once your order is dispatched.</p>
+            <p>For any questions, please contact us at support@su413shop.com</p>
+        </div>
+
+        <div class="thank-you">
+            Thank you for shopping with SU4.13 Shop! 🛍️
+        </div>
+    </div>
+</body>
+</html>

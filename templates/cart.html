@@ -1,0 +1,92 @@
+{% extends "base.html" %}
+
+{% block title %}Shopping Cart - Flask Ecommerce{% endblock %}
+
+{% block content %}
+<div class="cart-container">
+    <h1>Shopping Cart</h1>
+    <div id="cartItems"></div>
+    <div class="cart-total" id="cartTotal"></div>
+    <div style="margin-top: 2rem; text-align: center;">
+        <button class="btn" onclick="checkout()">Proceed to Checkout</button>
+        <a href="/" class="btn btn-secondary">Continue Shopping</a>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+
+<script>
+    let total = 0;
+    async function loadCartItems() {
+        const cartItemsContainer = document.getElementById('cartItems');
+        const cartTotalContainer = document.getElementById('cartTotal');
+
+        if (cartManager.cart.length === 0) {
+            cartItemsContainer.innerHTML = '<div class="empty-cart">Your cart is empty</div>';
+            cartTotalContainer.innerHTML = '';
+            return;
+        }
+
+
+    cartItemsContainer.innerHTML = '';
+
+    for (const cartItem of cartManager.cart) {
+        try {
+            const response = await fetch(`/api/product/${cartItem.id}`);
+            const product = await response.json();
+            
+            const itemTotal = product.price * cartItem.quantity;
+            total += itemTotal;
+
+            const cartItemDiv = document.createElement('div');
+            cartItemDiv.className = 'cart-item';
+            cartItemDiv.innerHTML = `
+                <img src="${product.image}" alt="${product.name}" class="cart-item-image">
+                <div>
+                    <h3>${product.name}</h3>
+                    <p>$${product.price.toFixed(2)} each</p>
+                </div>
+                <div class="quantity-controls">
+                    <button class="quantity-btn" onclick="updateQuantity(${product.id}, ${cartItem.quantity - 1})">-</button>
+                    <span>${cartItem.quantity}</span>
+                    <button class="quantity-btn" onclick="updateQuantity(${product.id}, ${cartItem.quantity + 1})">+</button>
+                </div>
+                <div>$${itemTotal.toFixed(2)}</div>
+                <button class="btn btn-secondary" onclick="removeItem(${product.id})">Remove</button>
+            `;
+            cartItemsContainer.appendChild(cartItemDiv);
+        } catch (error) {
+            console.error('Error loading product:', error);
+
+        }
+    }
+
+    cartTotalContainer.innerHTML = `Total: $${total.toFixed(2)}`;
+}
+
+function updateQuantity(productId, quantity) {
+    cartManager.updateQuantity(productId, quantity);
+    loadCartItems();
+}
+
+function removeItem(productId) {
+    cartManager.removeFromCart(productId);
+    loadCartItems();
+}
+
+function checkout() {
+    if (cartManager.cart.length === 0) {
+        alert('Your cart is empty!');
+        return;
+    }
+    else{
+        var urlRedirect = document.URL
+        var url = window.location.toString();
+        window.location = url.replace( urlRedirect , '/checkout');
+    }
+}
+
+document.addEventListener('DOMContentLoaded', loadCartItems);
+</script>
+{% endblock %}

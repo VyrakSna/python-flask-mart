@@ -1,0 +1,542 @@
+{% extends "base.html" %}
+
+{% block title %}Checkout - Flask Ecommerce{% endblock %}
+
+{% block content %}
+<style>
+
+.checkout-container {
+    display: grid;
+    grid-template-columns: 1fr 400px;
+    gap: 3rem;
+    margin-top: 2rem;
+}
+
+.billing-form {
+    background: white;
+    padding: 2rem;
+    border-radius: 10px;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+}
+
+.form-group {
+    margin-bottom: 1.5rem;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 0.5rem;
+    font-weight: 600;
+    color: #333;
+}
+
+.form-group input,
+.form-group textarea {
+    width: 100%;
+    padding: 0.8rem;
+    border: 2px solid #e1e5e9;
+    border-radius: 5px;
+    transition: border-color 0.3s;
+    font-family: inherit;
+}
+
+.form-group input:focus,
+.form-group textarea:focus {
+    outline: none;
+    border-color: #007bff;
+}
+
+.form-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+}
+
+.order-summary {
+    background: white;
+    padding: 2rem;
+    border-radius: 10px;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+    height: fit-content;
+    position: sticky;
+    top: 2rem;
+}
+
+.summary-item {
+    display: flex;
+    gap: 1rem;
+    padding: 1rem 0;
+    border-bottom: 1px solid #eee;
+}
+
+.summary-item-image {
+    width: 60px;
+    height: 60px;
+    object-fit: cover;
+    border-radius: 5px;
+}
+
+.summary-item-info {
+    flex: 1;
+}
+
+.summary-item-name {
+    font-weight: 600;
+    color: #333;
+    margin-bottom: 0.25rem;
+}
+
+.summary-item-price {
+    color: #666;
+    font-size: 0.9rem;
+}
+
+.summary-totals {
+    margin-top: 1.5rem;
+    padding-top: 1.5rem;
+    border-top: 2px solid #eee;
+}
+
+.summary-row {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 0.75rem;
+    color: #666;
+}
+
+.summary-row.total {
+    font-size: 1.3rem;
+    font-weight: 700;
+    color: #333;
+    margin-top: 1rem;
+    padding-top: 1rem;
+    border-top: 2px solid #333;
+}
+
+.btn-place-order {
+    width: 100%;
+    background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+    color: white;
+    border: none;
+    font-size: 1.1rem;
+    padding: 1rem;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: transform 0.2s;
+    font-weight: 600;
+}
+
+.btn-place-order:hover {
+    transform: translateY(-2px);
+}
+
+.btn-place-order:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    transform: none;
+}
+
+.success-message,
+.error-message {
+    padding: 1rem;
+    border-radius: 5px;
+    margin-bottom: 2rem;
+}
+
+.success-message {
+    background: #d4edda;
+    color: #155724;
+    border: 1px solid #c3e6cb;
+}
+
+.error-message {
+    background: #f8d7da;
+    color: #721c24;
+    border: 1px solid #f5c6cb;
+}
+
+.empty-cart {
+    text-align: center;
+    padding: 2rem;
+    color: #666;
+}
+
+.payment-divider {
+    display: flex;
+    align-items: center;
+    text-align: center;
+    margin: 2rem 0;
+    color: #666;
+}
+
+.payment-divider::before,
+.payment-divider::after {
+    content: '';
+    flex: 1;
+    border-bottom: 1px solid #ddd;
+}
+
+.payment-divider span {
+    padding: 0 1rem;
+    font-size: 0.9rem;
+}
+
+#paypal-button-container {
+    margin-top: 1rem;
+}
+
+@media (max-width: 768px) {
+    .checkout-container {
+        grid-template-columns: 1fr;
+        gap: 2rem;
+    }
+
+    .form-row {
+        grid-template-columns: 1fr;
+    }
+
+    .order-summary {
+        position: static;
+    }
+}
+
+</style>
+<h1>Checkout</h1>
+
+<div id="checkoutMessages"></div>
+
+<div class="checkout-container">
+
+    <div class="billing-form">
+        <h2 style="margin-bottom: 2rem; color: #333;">Billing Address</h2>
+
+        <form id="checkoutForm" method="post">
+            <div class="form-group">
+                <label for="fullName">Full Name *</label>
+                <input type="text" id="fullName" name="fullName" required>
+            </div>
+
+            <div class="form-group">
+                <label for="email">Email Address *</label>
+                <input type="email" id="email" name="email" required>
+            </div>
+
+            <div class="form-group">
+                <label for="phone">Phone Number *</label>
+                <input type="tel" id="phone" name="phone" required>
+            </div>
+
+            <div class="form-group">
+                <label for="address">Street Address *</label>
+                <input type="text" id="address" name="address" placeholder="123 Main Street" required>
+            </div>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="city">City *</label>
+                    <input type="text" id="city" name="city" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="state">State/Province *</label>
+                    <input type="text" id="state" name="state" required>
+                </div>
+            </div>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="zipCode">ZIP/Postal Code *</label>
+                    <input type="text" id="zipCode" name="zipCode" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="country">Country *</label>
+                    <input type="text" id="country" name="country" value="Cambodia" required>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label for="notes">Order Notes (Optional)</label>
+                <textarea id="notes" name="notes" rows="3" placeholder="Any special instructions for your order..."></textarea>
+            </div>
+
+            <button type="submit" class="btn btn-place-order" id="placeOrderBtn">
+                Place Order (Cash on Delivery)
+            </button>
+
+            <div class="payment-divider">
+                <span>OR PAY WITH</span>
+            </div>
+
+            <div id="paypal-button-container"></div>
+        </form>
+    </div>
+
+
+    <div class="order-summary">
+        <h2 style="margin-bottom: 1.5rem; color: #333;">Order Summary</h2>
+
+        <div id="orderItems"></div>
+
+        <div class="summary-totals">
+            <div class="summary-row">
+                <span>Subtotal:</span>
+                <span id="subtotal">$0.00</span>
+            </div>
+            <div class="summary-row">
+                <span>Shipping:</span>
+                <span id="shipping">$9.99</span>
+            </div>
+            <div class="summary-row">
+                <span>Tax:</span>
+                <span id="tax">$0.00</span>
+            </div>
+            <div class="summary-row total">
+                <span>Total:</span>
+                <span id="total">$0.00</span>
+            </div>
+        </div>
+
+        <div style="margin-top: 2rem; padding-top: 1rem; border-top: 1px solid #eee;">
+            <p style="color: #666; font-size: 0.9rem;">
+                <strong>Secure Checkout:</strong> Your payment information is encrypted and secure.
+            </p>
+        </div>
+
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+
+<script src="https://www.paypal.com/sdk/js?client-id=AcUmdMr2CWIPOYgHTMKrDOP_1yuO4bI9_An14hV3YEn0nPeHd7cRNabdp86EZG_X7vBeYJnppu6dGubj&currency=USD"></script>
+
+<script>
+
+let orderData = {
+    items: [],
+    subtotal: 0,
+    shipping: 9.99,
+    tax: 0,
+    total: 0
+};
+
+async function loadOrderSummary() {
+    const orderItemsContainer = document.getElementById('orderItems');
+    const subtotalEl = document.getElementById('subtotal');
+    const taxEl = document.getElementById('tax');
+    const totalEl = document.getElementById('total');
+
+    if (cartManager.cart.length === 0) {
+        orderItemsContainer.innerHTML = '<div class="empty-cart">Your cart is empty</div>';
+        return;
+    }
+
+    let subtotal = 0;
+    orderItemsContainer.innerHTML = '';
+    orderData.items = [];
+
+    for (const cartItem of cartManager.cart) {
+        try {
+            const response = await fetch(`/api/product/${cartItem.id}`);
+            const product = await response.json();
+
+            const itemTotal = product.price * cartItem.quantity;
+            subtotal += itemTotal;
+
+            orderData.items.push({
+                id: product.id,
+                name: product.name,
+                price: product.price,
+                quantity: cartItem.quantity,
+                total: itemTotal
+            });
+
+            const summaryItemDiv = document.createElement('div');
+            summaryItemDiv.className = 'summary-item';
+            summaryItemDiv.innerHTML = `
+                <img src="${product.image}" alt="${product.name}" class="summary-item-image">
+                <div class="summary-item-info">
+                    <div class="summary-item-name">${product.name}</div>
+                    <div class="summary-item-price">$${product.price.toFixed(2)} × ${cartItem.quantity}</div>
+                </div>
+                <div style="font-weight: 600;">$${itemTotal.toFixed(2)}</div>
+            `;
+            orderItemsContainer.appendChild(summaryItemDiv);
+        } catch (error) {
+            console.error('Error loading product:', error);
+        }
+    }
+
+    orderData.subtotal = subtotal;
+    orderData.total = subtotal + orderData.shipping;
+
+    subtotalEl.textContent = `$${orderData.subtotal.toFixed(2)}`;
+    taxEl.textContent = `$${orderData.tax.toFixed(2)}`;
+    totalEl.textContent = `$${orderData.total.toFixed(2)}`;
+}
+
+function showMessage(message, type = 'success') {
+    const messagesContainer = document.getElementById('checkoutMessages');
+    const messageDiv = document.createElement('div');
+    messageDiv.className = type === 'success' ? 'success-message' : 'error-message';
+    messageDiv.textContent = message;
+    messagesContainer.innerHTML = '';
+    messagesContainer.appendChild(messageDiv);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function getBillingInfo() {
+    const form = document.getElementById('checkoutForm');
+    const formData = new FormData(form);
+
+    return {
+        fullName: formData.get('fullName'),
+        email: formData.get('email'),
+        phone: formData.get('phone'),
+        address: formData.get('address'),
+        city: formData.get('city'),
+        state: formData.get('state'),
+        zipCode: formData.get('zipCode'),
+        country: formData.get('country'),
+        notes: formData.get('notes')
+    };
+}
+
+function validateForm() {
+    const form = document.getElementById('checkoutForm');
+    return form.checkValidity();
+}
+
+async function submitOrder(paymentMethod, paymentDetails = null) {
+    const billingInfo = getBillingInfo();
+
+    const orderPayload = {
+        billing: billingInfo,
+        items: orderData.items,
+        totals: {
+            subtotal: orderData.subtotal,
+            shipping: orderData.shipping,
+            tax: orderData.tax,
+            total: orderData.total
+        },
+        paymentMethod: paymentMethod,
+        paymentDetails: paymentDetails,
+        timestamp: new Date().toISOString()
+    };
+
+    try {
+        const response = await fetch('/api/place-order', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(orderPayload)
+        });
+
+        const result = await response.json();
+
+        if (result.success) {
+            localStorage.removeItem('cart');
+            cartManager.cart = [];
+            cartManager.updateCartCount();
+
+            showMessage(`Order placed successfully!`, 'success');
+
+            document.getElementById('checkoutForm').reset();
+            loadOrderSummary();
+
+            setTimeout(() => {
+                window.location.href = '/';
+            }, 5000);
+
+            return true;
+        } else {
+            showMessage(result.message || 'Failed to place order. Please try again.', 'error');
+            return false;
+        }
+    } catch (error) {
+        console.error('Checkout error:', error);
+        showMessage('An error occurred while processing your order. Please try again.', 'error');
+        return false;
+    }
+}
+
+async function handleCheckoutSubmit(event) {
+    event.preventDefault();
+
+    if (cartManager.cart.length === 0) {
+        showMessage('Your cart is empty. Please add items before checkout.', 'error');
+        return;
+    }
+
+    const placeOrderBtn = document.getElementById('placeOrderBtn');
+    placeOrderBtn.disabled = true;
+    placeOrderBtn.textContent = 'Processing...';
+
+    const success = await submitOrder('cash_on_delivery');
+
+    placeOrderBtn.disabled = false;
+    placeOrderBtn.textContent = 'Place Order (Cash on Delivery)';
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    loadOrderSummary();
+
+    const checkoutForm = document.getElementById('checkoutForm');
+    checkoutForm.addEventListener('submit', handleCheckoutSubmit);
+
+    paypal.Buttons({
+        createOrder: function(data, actions) {
+            if (!validateForm()) {
+                showMessage('Please fill in all required billing information before proceeding with PayPal.', 'error');
+                return Promise.reject('Form validation failed');
+            }
+
+            if (cartManager.cart.length === 0) {
+                showMessage('Your cart is empty.', 'error');
+                return Promise.reject('Cart is empty');
+            }
+
+            return actions.order.create({
+                purchase_units: [{
+                    amount: {
+                        value: orderData.total.toFixed(2),
+                        currency_code: 'USD'
+                    },
+                    description: `Order from Flask Ecommerce - ${orderData.items.length} item(s)`
+                }]
+            });
+        },
+
+        onApprove: function(data, actions) {
+            return actions.order.capture().then(async function(details) {
+                showMessage('Payment completed successfully! Processing your order...', 'success');
+
+                const paymentDetails = {
+                    paypalOrderId: data.orderID,
+                    paypalPayerId: data.payerID,
+                    payerName: details.payer.name.given_name + ' ' + details.payer.name.surname,
+                    payerEmail: details.payer.email_address,
+                    transactionId: details.purchase_units[0].payments.captures[0].id,
+                    amount: details.purchase_units[0].payments.captures[0].amount.value,
+                    status: details.status
+                };
+
+                await submitOrder('paypal', paymentDetails);
+            });
+        },
+
+        onError: function(err) {
+            console.error('PayPal error:', err);
+            showMessage('An error occurred with PayPal. Please try again or use another payment method.', 'error');
+        },
+
+        onCancel: function(data) {
+            showMessage('PayPal payment was cancelled.', 'error');
+        }
+    }).render('#paypal-button-container');
+});
+
+</script>
+{% endblock %}

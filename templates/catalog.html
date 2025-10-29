@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+
+{% block title %}Product Catalog - Flask Ecommerce{% endblock %}
+
+{% block content %}
+<h1>Our Products</h1>
+<div class="product-grid">
+    {% for product in products %}
+    <div class="product-card">
+        <img src="{{ product.image }}" alt="{{ product.name }}" class="product-image">
+        <div class="product-info">
+            <h2 class="product-name">{{ product.name }}</h2>
+            <div class="product-price">${{ "%.2f"|format(product.price) }}</div>
+            <p class="product-description">{{ product.description }}</p>
+            <div class="rating">
+                <span class="stars">★★★★★</span>
+                <span>{{ product.rating }}/5</span>
+            </div>
+            <a href="/product/{{ product.id }}" class="btn">View Details</a>
+            <button class="btn btn-secondary" onclick="cartManager.addToCart({{ product.id }})">
+                Add to Cart
+            </button>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% endblock %}
