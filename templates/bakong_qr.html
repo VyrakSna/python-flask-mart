@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Scan to Pay - Bakong</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .container {
+            max-width: 500px;
+            background: white;
+            border-radius: 20px;
+            padding: 40px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            text-align: center;
+        }
+        h1 {
+            color: #333;
+            margin-bottom: 10px;
+        }
+        .subtitle {
+            color: #666;
+            margin-bottom: 30px;
+        }
+        .qr-container {
+            background: #f8f9fa;
+            padding: 30px;
+            border-radius: 15px;
+            margin: 30px 0;
+        }
+        .qr-container img {
+            max-width: 100%;
+            height: auto;
+        }
+        .amount {
+            font-size: 2rem;
+            color: #667eea;
+            font-weight: bold;
+            margin: 20px 0;
+        }
+        .info {
+            background: #e8f0fe;
+            padding: 15px;
+            border-radius: 10px;
+            margin: 20px 0;
+            text-align: left;
+        }
+        .info p {
+            margin: 8px 0;
+            color: #333;
+        }
+        .info strong {
+            color: #667eea;
+        }
+        .status {
+            padding: 10px;
+            border-radius: 8px;
+            margin: 20px 0;
+            font-weight: 600;
+        }
+        .status.pending {
+            background: #fff3cd;
+            color: #856404;
+        }
+        .status.success {
+            background: #d4edda;
+            color: #155724;
+        }
+        .instructions {
+            text-align: left;
+            margin: 20px 0;
+            color: #555;
+            line-height: 1.8;
+        }
+        .instructions ol {
+            margin-left: 20px;
+        }
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #667eea;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 20px auto;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>📱 Scan to Pay with Bakong</h1>
+        <p class="subtitle">Use your Bakong app to scan and complete payment</p>
+
+        <div class="amount">$ {{ amount }}</div>
+
+        <div class="info">
+            <p><strong>Payment ID:</strong> {{ payment_id }}</p>
+            <p><strong>Description:</strong> {{ description }}</p>
+        </div>
+
+        <div class="qr-container">
+            {% if qr_code %}
+                <img src="{{ qr_code }}" alt="Bakong QR Code">
+            {% else %}
+                <p>QR Code not available</p>
+            {% endif %}
+        </div>
+
+        <div id="statusIndicator" class="status pending">
+            ⏳ Waiting for payment...
+        </div>
+
+        <div class="spinner" id="spinner"></div>
+
+        <div class="instructions">
+            <strong>How to pay:</strong>
+            <ol>
+                <li>Open your Bakong app</li>
+                <li>Tap "Scan QR" or "Pay"</li>
+                <li>Scan the QR code above</li>
+                <li>Confirm the payment amount</li>
+                <li>Complete the transaction</li>
+            </ol>
+        </div>
+    </div>
+
+    <script>
+        // Check payment status every 3 seconds
+        const paymentId = "{{ payment_id }}";
+        let checkInterval;
+
+        function checkPaymentStatus() {
+            fetch(`/payment/bakong/status/${paymentId}`)
+                .then(response => response.json())
+                .then(data => {
+                    console.log('Payment status:', data);
+
+                    if (data.success) {
+                        const status = data.status;
+
+                        if (status === 'completed' || status === 'success') {
+                            clearInterval(checkInterval);
+                            document.getElementById('statusIndicator').className = 'status success';
+                            document.getElementById('statusIndicator').innerHTML = '✅ Payment Successful!';
+                            document.getElementById('spinner').style.display = 'none';
+
+                            // Redirect to success page
+                            setTimeout(() => {
+                                window.location.href = `/payment/success/${paymentId}`;
+                            }, 2000);
+                        } else if (status === 'failed' || status === 'cancelled') {
+                            clearInterval(checkInterval);
+                            document.getElementById('statusIndicator').className = 'status';
+                            document.getElementById('statusIndicator').style.background = '#f8d7da';
+                            document.getElementById('statusIndicator').style.color = '#721c24';
+                            document.getElementById('statusIndicator').innerHTML = '❌ Payment Failed';
+                            document.getElementById('spinner').style.display = 'none';
+                        }
+                    }
+                })
+                .catch(error => {
+                    console.error('Error checking status:', error);
+                });
+        }
+
+        // Start checking status
+        checkInterval = setInterval(checkPaymentStatus, 3000);
+
+        // Check immediately
+        checkPaymentStatus();
+    </script>
+</body>
+</html>

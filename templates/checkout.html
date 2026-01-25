@@ -529,11 +529,11 @@ document.addEventListener('DOMContentLoaded', function() {
 
         onError: function(err) {
             console.error('PayPal error:', err);
-            showMessage('An error occurred with PayPal. Please try again or use another payment method.', 'error');
+            showMessage('An error occurred with PayPal. Please try again or use another payments method.', 'error');
         },
 
         onCancel: function(data) {
-            showMessage('PayPal payment was cancelled.', 'error');
+            showMessage('PayPal payments was cancelled.', 'error');
         }
     }).render('#paypal-button-container');
 });

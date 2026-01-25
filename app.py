@@ -5,8 +5,11 @@ from flask_mail import Mail, Message
 import json
 import os
 import paypalrestsdk
+
+from payments import BakongPayment
 from telegram import sendMessage
 from tabulate import tabulate
+import payments
 
 app = Flask(__name__)
 
@@ -209,6 +212,127 @@ def place_order():
         'message': 'Order placed successfully',
     }), 201
 
+# BAKONG PAYMENT API
+payments_db = {}
+@app.route('/bakong/form')
+def getform_bakong():
+    return render_template('bakong-testing.html')
+@app.route('/payment/bakong/initiate', methods=['POST'])
+def initiate_bakong_payment():
+    """Initiate Bakong payment"""
+    try:
+        # Get form data
+        amount = float(request.form.get('amount'))
+        description = request.form.get('description', 'Payment')
+        customer_name = request.form.get('customer_name', '')
+        customer_email = request.form.get('customer_email', '')
+
+        # Create Bakong payment
+        bakong = BakongPayment()
+        result = bakong.create_payment(
+            amount=amount,
+            currency='USD',
+            description=description
+        )
+
+        if result['success']:
+            payment_id = result['data'].get('payment_id')
+
+            # Store payment info
+            payments_db[payment_id] = {
+                'payment_id': payment_id,
+                'amount': amount,
+                'description': description,
+                'customer_name': customer_name,
+                'customer_email': customer_email,
+                'status': 'pending',
+                'gateway': 'bakong'
+            }
+
+            # Generate QR code
+            qr_result = bakong.generate_qr_code(payment_id)
+
+            if qr_result['success']:
+                return render_template('bakong_qr.html',
+                                       payment_id=payment_id,
+                                       qr_code=qr_result.get('qr_code'),
+                                       amount=amount,
+                                       description=description)
+            else:
+                return render_template('error.html',
+                                       error='Failed to generate QR code')
+        else:
+            return render_template('error.html',
+                                   error=result.get('error', 'Payment failed'))
+
+    except Exception as e:
+        return render_template('error.html', error=str(e))
+
+
+@app.route('/payment/bakong/status/<payment_id>')
+def check_bakong_status(payment_id):
+    """Check Bakong payment status (AJAX endpoint)"""
+    bakong = BakongPayment()
+    result = bakong.check_payment_status(payment_id)
+
+    if result['success']:
+        status = result['data'].get('status')
+
+        # Update local database
+        if payment_id in payments_db:
+            payments_db[payment_id]['status'] = status
+
+        return jsonify({
+            'success': True,
+            'status': status,
+            'data': result['data']
+        })
+    else:
+        return jsonify({
+            'success': False,
+            'error': result.get('error')
+        })
+
+
+@app.route('/payment/callback/bakong', methods=['POST'])
+def bakong_callback():
+    """Handle Bakong webhook callback"""
+    data = request.get_json()
+    signature = request.headers.get('X-Signature')
+
+    bakong = BakongPayment()
+
+    # Verify signature
+    if not bakong.verify_callback(data, signature):
+        app.logger.error('Invalid Bakong callback signature')
+        return jsonify({'error': 'Invalid signature'}), 400
+
+    payment_id = data.get('payment_id')
+    status = data.get('status')
+
+    # Update payment status in database
+    if payment_id in payments_db:
+        payments_db[payment_id]['status'] = status
+        app.logger.info(f'Payment {payment_id} updated to {status}')
+
+    return jsonify({'message': 'Callback received'}), 200
+
+
+@app.route('/payment/success/<payment_id>')
+def payment_success(payment_id):
+    """Payment success page"""
+    payment = payments_db.get(payment_id)
+
+    if payment:
+        return render_template('success.html', payment=payment)
+    else:
+        return render_template('error.html', error='Payment not found')
+
+
+@app.route('/payment/failed')
+def payment_failed():
+    """Payment failed page"""
+    return render_template('error.html', error='Payment failed or cancelled')
 
 
 if __name__ == '__main__':
