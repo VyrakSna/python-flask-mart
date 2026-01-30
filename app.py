@@ -1,8 +1,3 @@
-from http.client import responses
-from msvcrt import getch
-from tkinter.messagebox import showinfo
-from wsgiref.validate import assert_
-
 import requests
 from flask import Flask, render_template, jsonify, request, redirect, url_for, session, flash
 from functools import wraps
@@ -583,17 +578,17 @@ def payment_failed():
     """Payment failed page"""
     return render_template('error.html', error='Payment failed or cancelled')
 
-
-# Error handlers
-@app.errorhandler(404)
-def not_found(error):
-    return render_template('errors/404.html'), 404
-
-
-@app.errorhandler(500)
-def internal_error(error):
-    db.session.rollback()
-    return render_template('errors/500.html'), 500
+#
+# # Error handlers
+# @app.errorhandler(404)
+# def not_found(error):
+#     return render_template('errors/404.html'), 404
+#
+#
+# @app.errorhandler(500)
+# def internal_error(error):
+#     db.session.rollback()
+#     return render_template('errors/500.html'), 500
 
 
 if __name__ == '__main__':
