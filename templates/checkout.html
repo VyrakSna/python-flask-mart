@@ -452,12 +452,12 @@ async function submitOrder(paymentMethod, paymentDetails = null) {
 
             return true;
         } else {
-            showMessage(result.message || 'Failed to place order. Please try again.', 'error');
+            showMessage(result.message || 'Failed to place orders. Please try again.', 'error');
             return false;
         }
     } catch (error) {
         console.error('Checkout error:', error);
-        showMessage('An error occurred while processing your order. Please try again.', 'error');
+        showMessage('An error occurred while processing your orders. Please try again.', 'error');
         return false;
     }
 }
@@ -511,7 +511,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
         onApprove: function(data, actions) {
             return actions.order.capture().then(async function(details) {
-                showMessage('Payment completed successfully! Processing your order...', 'success');
+                showMessage('Payment completed successfully! Processing your orders...', 'success');
 
                 const paymentDetails = {
                     paypalOrderId: data.orderID,

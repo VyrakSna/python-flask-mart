@@ -1,0 +1,390 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Order {{ order.order_number }} - Admin</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: Arial, sans-serif; background: #f5f5f5; }
+
+        .navbar {
+            background: #2c3e50;
+            color: white;
+            padding: 15px 30px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .navbar a { color: white; text-decoration: none; margin: 0 15px; }
+
+        .container { max-width: 1200px; margin: 30px auto; padding: 0 20px; }
+
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .section {
+            background: white;
+            padding: 25px;
+            border-radius: 8px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+
+        .section h2 {
+            margin-bottom: 20px;
+            color: #2c3e50;
+            border-bottom: 2px solid #f0f0f0;
+            padding-bottom: 10px;
+        }
+
+        .info-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+
+        .info-item {
+            margin-bottom: 15px;
+        }
+
+        .info-label {
+            font-weight: bold;
+            color: #666;
+            font-size: 14px;
+            margin-bottom: 5px;
+        }
+
+        .info-value {
+            color: #333;
+            font-size: 16px;
+        }
+
+        .badge {
+            padding: 6px 12px;
+            border-radius: 4px;
+            font-size: 14px;
+            font-weight: bold;
+            display: inline-block;
+        }
+        .badge.pending { background: #fff3cd; color: #856404; }
+        .badge.approved { background: #cfe2ff; color: #084298; }
+        .badge.processing { background: #cfe2ff; color: #084298; }
+        .badge.shipped { background: #d1e7dd; color: #0f5132; }
+        .badge.delivered { background: #d1e7dd; color: #0f5132; }
+        .badge.cancelled { background: #f8d7da; color: #721c24; }
+        .badge.rejected { background: #f8d7da; color: #721c24; }
+
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+        th, td { padding: 12px; text-align: left; border-bottom: 1px solid #ddd; }
+        th { background: #f8f9fa; font-weight: bold; }
+
+        .product-img { width: 60px; height: 60px; object-fit: cover; border-radius: 4px; }
+
+        .btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            text-decoration: none;
+            display: inline-block;
+            margin: 5px;
+        }
+        .btn-success { background: #27ae60; color: white; }
+        .btn-danger { background: #e74c3c; color: white; }
+        .btn-primary { background: #3498db; color: white; }
+        .btn-secondary { background: #95a5a6; color: white; }
+        .btn-warning { background: #f39c12; color: white; }
+
+        .actions-panel {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 8px;
+            margin-top: 20px;
+        }
+
+        .actions-panel h3 {
+            margin-bottom: 15px;
+            color: #2c3e50;
+        }
+
+        .action-form {
+            margin-bottom: 15px;
+        }
+
+        textarea {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            resize: vertical;
+            min-height: 100px;
+            font-family: Arial, sans-serif;
+        }
+
+        .flash-messages { margin-bottom: 20px; }
+        .flash {
+            padding: 15px;
+            border-radius: 4px;
+            margin-bottom: 10px;
+        }
+        .flash.success { background: #d4edda; color: #155724; }
+        .flash.error { background: #f8d7da; color: #721c24; }
+        .flash.warning { background: #fff3cd; color: #856404; }
+
+        .timeline {
+            margin-top: 20px;
+        }
+
+        .timeline-item {
+            padding: 10px 0;
+            border-left: 3px solid #3498db;
+            padding-left: 20px;
+            margin-bottom: 15px;
+        }
+
+        .timeline-item .time {
+            font-size: 12px;
+            color: #666;
+        }
+
+        .summary-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 0;
+        }
+
+        .summary-row.total {
+            font-weight: bold;
+            font-size: 18px;
+            border-top: 2px solid #333;
+            padding-top: 15px;
+            margin-top: 15px;
+        }
+    </style>
+</head>
+<body>
+    <div class="navbar">
+        <div><strong>Admin Panel</strong></div>
+        <div>
+            <a href="{{ url_for('admin.dashboard') }}">Dashboard</a>
+            <a href="{{ url_for('admin.orders_list') }}">Orders</a>
+            <a href="{{ url_for('admin.products_list') }}">Products</a>
+        </div>
+    </div>
+
+    <div class="container">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                <div class="flash-messages">
+                    {% for category, message in messages %}
+                        <div class="flash {{ category }}">{{ message }}</div>
+                    {% endfor %}
+                </div>
+            {% endif %}
+        {% endwith %}
+
+        <div class="header">
+            <div>
+                <h1>Order {{ order.order_number }}</h1>
+                <span class="badge {{ order.status }}">{{ order.status.upper() }}</span>
+            </div>
+            <a href="{{ url_for('admin.orders_list') }}" class="btn btn-secondary">← Back to Orders</a>
+        </div>
+
+        <div class="info-grid">
+            <div class="section">
+                <h2>Customer Information</h2>
+                <div class="info-item">
+                    <div class="info-label">Name</div>
+                    <div class="info-value">{{ order.customer_name }}</div>
+                </div>
+                <div class="info-item">
+                    <div class="info-label">Email</div>
+                    <div class="info-value">{{ order.customer_email }}</div>
+                </div>
+                <div class="info-item">
+                    <div class="info-label">Phone</div>
+                    <div class="info-value">{{ order.customer_phone }}</div>
+                </div>
+            </div>
+
+            <div class="section">
+                <h2>Shipping Address</h2>
+                <div class="info-item">
+                    <div class="info-value">
+                        {{ order.shipping_address }}<br>
+                        {% if order.shipping_city %}{{ order.shipping_city }}, {% endif %}
+                        {% if order.shipping_state %}{{ order.shipping_state }} {% endif %}
+                        {% if order.shipping_zip %}{{ order.shipping_zip }}{% endif %}<br>
+                        {% if order.shipping_country %}{{ order.shipping_country }}{% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="section">
+            <h2>Order Items</h2>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Product</th>
+                        <th>SKU</th>
+                        <th>Price</th>
+                        <th>Quantity</th>
+                        <th>Subtotal</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in order.items %}
+                    <tr>
+                        <td>
+                            <div style="display: flex; align-items: center; gap: 10px;">
+                                {% if item.product_image %}
+                                    <img src="{{ item.product_image }}" alt="{{ item.product_name }}" class="product-img">
+                                {% endif %}
+                                <strong>{{ item.product_name }}</strong>
+                            </div>
+                        </td>
+                        <td>{{ item.product_sku or '-' }}</td>
+                        <td>${{ "%.2f"|format(item.price) }}</td>
+                        <td>{{ item.quantity }}</td>
+                        <td>${{ "%.2f"|format(item.subtotal) }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+
+            <div style="max-width: 400px; margin-left: auto; margin-top: 30px;">
+                <div class="summary-row">
+                    <span>Subtotal:</span>
+                    <span>${{ "%.2f"|format(order.subtotal) }}</span>
+                </div>
+                <div class="summary-row">
+                    <span>Shipping:</span>
+                    <span>${{ "%.2f"|format(order.shipping_cost) }}</span>
+                </div>
+                <div class="summary-row">
+                    <span>Tax:</span>
+                    <span>${{ "%.2f"|format(order.tax) }}</span>
+                </div>
+                <div class="summary-row total">
+                    <span>Total:</span>
+                    <span>${{ "%.2f"|format(order.total) }}</span>
+                </div>
+            </div>
+        </div>
+
+        {% if order.customer_notes %}
+        <div class="section">
+            <h2>Customer Notes</h2>
+            <p>{{ order.customer_notes }}</p>
+        </div>
+        {% endif %}
+
+        <div class="section">
+            <h2>Order Timeline</h2>
+            <div class="timeline">
+                <div class="timeline-item">
+                    <strong>Order Created</strong>
+                    <div class="time">{{ order.created_at.strftime('%Y-%m-%d %H:%M:%S') }}</div>
+                </div>
+                {% if order.approved_at %}
+                <div class="timeline-item">
+                    <strong>Order Approved</strong>
+                    <div class="time">{{ order.approved_at.strftime('%Y-%m-%d %H:%M:%S') }}</div>
+                </div>
+                {% endif %}
+                {% if order.shipped_at %}
+                <div class="timeline-item">
+                    <strong>Order Shipped</strong>
+                    <div class="time">{{ order.shipped_at.strftime('%Y-%m-%d %H:%M:%S') }}</div>
+                </div>
+                {% endif %}
+                {% if order.delivered_at %}
+                <div class="timeline-item">
+                    <strong>Order Delivered</strong>
+                    <div class="time">{{ order.delivered_at.strftime('%Y-%m-%d %H:%M:%S') }}</div>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <div class="section">
+            <h2>Admin Notes</h2>
+            <form method="POST" action="{{ url_for('admin.order_update_notes', order_id=order.id) }}">
+                <textarea name="admin_notes" placeholder="Add notes about this order...">{{ order.admin_notes or '' }}</textarea>
+                <button type="submit" class="btn btn-primary" style="margin-top: 10px;">Update Notes</button>
+            </form>
+        </div>
+
+        <div class="section">
+            <h2>Order Actions</h2>
+            <div class="actions-panel">
+                {% if order.can_approve %}
+                <div class="action-form">
+                    <h3>✅ Approve Order</h3>
+                    <form method="POST" action="{{ url_for('admin.order_approve', order_id=order.id) }}"
+                          onsubmit="return confirm('Are you sure you want to approve this order?');">
+                        <button type="submit" class="btn btn-success">Approve Order</button>
+                    </form>
+                </div>
+                {% endif %}
+
+                {% if order.can_reject %}
+                <div class="action-form">
+                    <h3>❌ Reject Order</h3>
+                    <form method="POST" action="{{ url_for('admin.order_reject', order_id=order.id) }}">
+                        <textarea name="admin_notes" placeholder="Reason for rejection (required)" required></textarea>
+                        <button type="submit" class="btn btn-danger" style="margin-top: 10px;"
+                                onclick="return confirm('Are you sure you want to reject this order? Stock will be restored.');">
+                            Reject Order
+                        </button>
+                    </form>
+                </div>
+                {% endif %}
+
+                {% if order.can_ship %}
+                <div class="action-form">
+                    <h3>📦 Mark as Shipped</h3>
+                    <form method="POST" action="{{ url_for('admin.order_ship', order_id=order.id) }}">
+                        <input type="text" name="tracking_number" placeholder="Tracking number (optional)"
+                               style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px; margin-bottom: 10px;">
+                        <button type="submit" class="btn btn-primary">Mark as Shipped</button>
+                    </form>
+                </div>
+                {% endif %}
+
+                {% if order.status == 'shipped' %}
+                <div class="action-form">
+                    <h3>✅ Mark as Delivered</h3>
+                    <form method="POST" action="{{ url_for('admin.order_deliver', order_id=order.id) }}"
+                          onsubmit="return confirm('Mark this order as delivered?');">
+                        <button type="submit" class="btn btn-success">Mark as Delivered</button>
+                    </form>
+                </div>
+                {% endif %}
+
+                {% if order.can_cancel %}
+                <div class="action-form">
+                    <h3>🚫 Cancel Order</h3>
+                    <form method="POST" action="{{ url_for('admin.order_cancel', order_id=order.id) }}"
+                          onsubmit="return confirm('Are you sure you want to cancel this order? Stock will be restored.');">
+                        <button type="submit" class="btn btn-danger">Cancel Order</button>
+                    </form>
+                </div>
+                {% endif %}
+
+                {% if order.status in ['delivered', 'cancelled', 'rejected'] %}
+                <p style="color: #666; font-style: italic;">No actions available for this order status.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</body>
+</html>

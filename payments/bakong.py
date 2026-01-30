@@ -109,6 +109,6 @@ class BakongPayment:
 
     @staticmethod
     def generate_order_id():
-        """Generate unique order ID"""
+        """Generate unique orders ID"""
         import uuid
         return f"BKG-{uuid.uuid4().hex[:12].upper()}"

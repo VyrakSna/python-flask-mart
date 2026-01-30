@@ -1,20 +1,61 @@
 import os
 from dotenv import load_dotenv
 
+# Load environment variables from .env file
 load_dotenv()
+
+
 class Config:
-    # Bakong Configuration
-    BAKONG_API_URL = "https://api-bakong.nbc.gov.kh"  # Production URL
-    BAKONG_MERCHANT_ID = os.getenv('BAKONG_MERCHANT_ID')
-    BAKONG_API_KEY = os.getenv('BAKONG_API_KEY')
-    BAKONG_SECRET_KEY = os.getenv('BAKONG_SECRET_KEY')
+    """Base configuration"""
+    SECRET_KEY = os.environ.get('SECRET_KEY') or 'dev-secret-key-change-in-production'
 
-    # ABA PayWay Configuration
-    ABA_API_URL = "https://checkout.payway.com.kh/api"  # Production URL
-    ABA_MERCHANT_ID = os.getenv('ABA_MERCHANT_ID')
-    ABA_API_KEY = os.getenv('ABA_API_KEY')
-    ABA_API_SECRET = os.getenv('ABA_API_SECRET')
+    # Neon Database Configuration
+    SQLALCHEMY_DATABASE_URI = os.environ.get('DATABASE_URL')
+    SQLALCHEMY_TRACK_MODIFICATIONS = False
+    SQLALCHEMY_ENGINE_OPTIONS = {
+        'pool_size': 10,
+        'pool_recycle': 3600,
+        'pool_pre_ping': True,
+        'connect_args': {
+            'sslmode': 'require',
+            'connect_timeout': 10
+        }
+    }
 
-    # General Settings
-    SECRET_KEY = os.getenv('SECRET_KEY', 'your-secret-key')
-    PAYMENT_CALLBACK_URL = os.getenv('PAYMENT_CALLBACK_URL', 'http://localhost:5000/payment/callback')
+    # File Upload Configuration
+    UPLOAD_FOLDER = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'static', 'uploads')
+    MAX_CONTENT_LENGTH = 16 * 1024 * 1024  # 16MB max file size
+    ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif', 'webp'}
+
+    # Session Configuration
+    SESSION_COOKIE_SECURE = True  # Set to True in production with HTTPS
+    SESSION_COOKIE_HTTPONLY = True
+    SESSION_COOKIE_SAMESITE = 'Lax'
+    PERMANENT_SESSION_LIFETIME = 3600  # 1 hour
+
+
+class DevelopmentConfig(Config):
+    """Development configuration"""
+    DEBUG = True
+    SESSION_COOKIE_SECURE = False  # Allow HTTP in development
+
+
+class ProductionConfig(Config):
+    """Production configuration"""
+    DEBUG = False
+    SESSION_COOKIE_SECURE = True
+
+
+class TestingConfig(Config):
+    """Testing configuration"""
+    TESTING = True
+    SQLALCHEMY_DATABASE_URI = 'sqlite:///:memory:'
+
+
+# Configuration dictionary
+config = {
+    'development': DevelopmentConfig,
+    'production': ProductionConfig,
+    'testing': TestingConfig,
+    'default': DevelopmentConfig
+}
