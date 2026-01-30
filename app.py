@@ -57,67 +57,102 @@ def login_required(f):
 
     return decorated_function
 
-
 PRODUCTS = [
     {
         'id': 1,
         'name': 'Wireless Headphones',
+        'sku': 'WH-001',
         'price': 99.99,
+        'compare_price': 129.99,
         'image': 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=400&h=300&fit=crop',
         'description': 'Premium wireless headphones with noise cancellation and 30-hour battery life. Perfect for music lovers and professionals.',
         'category': 'Electronics',
         'rating': 4.9,
-        'in_stock': True
+        'in_stock': True,
+        'stock_quantity': 50,
+        'weight': 0.5,
+        'brand': 'SoundMax',
+        'created_at': '2025-01-01T00:00:00Z'
     },
     {
         'id': 2,
         'name': 'Smart Watch',
+        'sku': 'SW-002',
         'price': 249.99,
+        'compare_price': 299.99,
         'image': 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=400&h=300&fit=crop',
         'description': 'Advanced smartwatch with health tracking, GPS, and 7-day battery. Monitor your fitness and stay connected.',
         'category': 'Electronics',
         'rating': 4.8,
-        'in_stock': True
+        'in_stock': True,
+        'stock_quantity': 35,
+        'weight': 0.2,
+        'brand': 'TechWear',
+        'created_at': '2025-01-01T00:00:00Z'
     },
     {
         'id': 3,
         'name': 'Coffee Maker',
+        'sku': 'CM-003',
         'price': 129.99,
+        'compare_price': 159.99,
         'image': 'https://images.unsplash.com/photo-1559131397-f94da358f7ca?w=400&h=300&fit=crop',
         'description': 'Programmable coffee maker with thermal carafe. Brew perfect coffee every morning with customizable settings.',
         'category': 'Home & Kitchen',
         'rating': 4.3,
-        'in_stock': True
+        'in_stock': True,
+        'stock_quantity': 20,
+        'weight': 2.5,
+        'brand': 'BrewMaster',
+        'created_at': '2025-01-01T00:00:00Z'
     },
     {
         'id': 4,
         'name': 'Laptop Backpack',
+        'sku': 'LB-004',
         'price': 79.99,
+        'compare_price': 99.99,
         'image': 'https://images.unsplash.com/photo-1553062407-98eeb64c6a62?w=400&h=300&fit=crop',
         'description': 'Durable laptop backpack with multiple compartments and USB charging port. Perfect for work and travel.',
         'category': 'Accessories',
         'rating': 4.6,
-        'in_stock': True
+        'in_stock': True,
+        'stock_quantity': 60,
+        'weight': 1.0,
+        'brand': 'UrbanCarry',
+        'created_at': '2025-01-01T00:00:00Z'
     },
     {
         'id': 5,
         'name': 'Bluetooth Speaker',
+        'sku': 'BS-005',
         'price': 59.99,
+        'compare_price': 79.99,
         'image': 'https://images.unsplash.com/photo-1608043152269-423dbba4e7e1?w=400&h=300&fit=crop',
         'description': 'Portable Bluetooth speaker with 360-degree sound and waterproof design. Great for outdoor adventures.',
         'category': 'Electronics',
         'rating': 4.4,
-        'in_stock': True
+        'in_stock': True,
+        'stock_quantity': 40,
+        'weight': 0.8,
+        'brand': 'BoomSound',
+        'created_at': '2025-01-01T00:00:00Z'
     },
     {
         'id': 6,
         'name': 'Yoga Mat',
+        'sku': 'YM-006',
         'price': 34.99,
+        'compare_price': 49.99,
         'image': 'https://images.unsplash.com/photo-1544367567-0f2fcb009e0b?w=400&h=300&fit=crop',
         'description': 'Premium yoga mat with excellent grip and cushioning. Made from eco-friendly materials.',
         'category': 'Sports & Fitness',
         'rating': 4.7,
-        'in_stock': True
+        'in_stock': True,
+        'stock_quantity': 100,
+        'weight': 1.2,
+        'brand': 'ZenFit',
+        'created_at': '2025-01-01T00:00:00Z'
     }
 ]
 
