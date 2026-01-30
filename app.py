@@ -156,6 +156,51 @@ PRODUCTS = [
     }
 ]
 
+
+# Add this function here
+def seed_products():
+    """Seed database with initial products"""
+    from models.product import Product
+    import re
+
+    def create_slug(name):
+        """Simple slug creation"""
+        slug = name.lower()
+        slug = re.sub(r'[^a-z0-9]+', '-', slug)
+        return slug.strip('-')
+
+    # Check if products already exist
+    existing_count = Product.query.count()
+    if existing_count > 0:
+        print(f"Database already has {existing_count} products. Skipping seed.")
+        return
+
+    print("Seeding products into database...")
+
+    for product_data in PRODUCTS:
+        product = Product(
+            name=product_data['name'],
+            slug=create_slug(product_data['name']),
+            sku=product_data['sku'],
+            description=product_data['description'],
+            price=product_data['price'],
+            compare_price=product_data.get('compare_price'),
+            image_url=product_data['image'],
+            stock_quantity=product_data['stock_quantity'],
+            weight=product_data.get('weight', 0),
+            is_active=product_data.get('in_stock', True),
+            is_featured=False,
+            low_stock_threshold=10
+        )
+        db.session.add(product)
+
+    try:
+        db.session.commit()
+        print(f"✓ Successfully seeded {len(PRODUCTS)} products into database")
+    except Exception as e:
+        db.session.rollback()
+        print(f"✗ Error seeding products: {e}")
+
 paypalrestsdk.configure({
     "mode": "sandbox",
     "client_id": os.environ.get('PAYPAL_CLIENT_ID'),
@@ -315,28 +360,78 @@ def logout():
 @app.route('/catalog')
 @login_required
 def catalog():
-    return render_template('catalog.html', products=PRODUCTS)
+    # Get active products from database
+    products = Product.query.filter_by(is_active=True).all()
+
+    # Convert to dict format for template compatibility
+    products_list = [{
+        'id': p.id,
+        'name': p.name,
+        'sku': p.sku,
+        'price': float(p.price),
+        'compare_price': float(p.compare_price) if p.compare_price else None,
+        'image': p.image_url,  # Map image_url to 'image' for template
+        'description': p.description,
+        'category': p.category.name if p.category else 'Uncategorized',
+        'rating': 4.5,  # Default rating since your model doesn't have it
+        'in_stock': p.in_stock,
+        'stock_quantity': p.stock_quantity,
+        'weight': float(p.weight) if p.weight else 0,
+        'brand': 'Generic',  # Default brand since your model doesn't have it
+    } for p in products]
+
+    return render_template('catalog.html', products=products_list)
 
 
 @app.route('/product/<int:product_id>')
 def product_detail(product_id):
-    product = next((p for p in PRODUCTS if p['id'] == product_id), None)
-    if not product:
-        return "Product not found", 404
-    return render_template('product_detail.html', product=product)
+    # Get product from database
+    product = Product.query.get_or_404(product_id)
 
-
-@app.route('/cart')
-def cart():
-    return render_template('cart.html')
+    product_dict = {
+        'id': product.id,
+        'name': product.name,
+        'sku': product.sku,
+        'price': float(product.price),
+        'compare_price': float(product.compare_price) if product.compare_price else None,
+        'image': product.image_url,
+        'description': product.description,
+        'category': product.category.name if product.category else 'Uncategorized',
+        'rating': 4.5,
+        'in_stock': product.in_stock,
+        'stock_quantity': product.stock_quantity,
+        'weight': float(product.weight) if product.weight else 0,
+        'brand': 'Generic',
+    }
+    return render_template('product_detail.html', product=product_dict)
 
 
 @app.route('/api/product/<int:product_id>')
 def api_product(product_id):
-    product = next((p for p in PRODUCTS if p['id'] == product_id), None)
+    # Get product from database
+    product = Product.query.get(product_id)
     if not product:
         return jsonify({'error': 'Product not found'}), 404
-    return jsonify(product)
+
+    return jsonify({
+        'id': product.id,
+        'name': product.name,
+        'sku': product.sku,
+        'price': float(product.price),
+        'compare_price': float(product.compare_price) if product.compare_price else None,
+        'image': product.image_url,  # Frontend expects 'image'
+        'description': product.description,
+        'category': product.category.name if product.category else 'Uncategorized',
+        'rating': 4.5,
+        'in_stock': product.in_stock,
+        'stock_quantity': product.stock_quantity,
+        'weight': float(product.weight) if product.weight else 0,
+        'brand': 'Generic',
+    })
+@app.route('/cart')
+def cart():
+    return render_template('cart.html')
+
 
 
 @app.get('/checkout')
@@ -360,7 +455,7 @@ def place_order():
     if not items or not bill_info:
         return jsonify({
             'success': False,
-            'message': 'Invalid orders data'
+            'message': 'Invalid order data'
         }), 400
 
     name = bill_info.get('fullName', '')
@@ -374,10 +469,10 @@ def place_order():
     notes = bill_info.get('notes', '')
 
     try:
-        # Generate unique orders number
+        # Generate unique order number
         order_number = f"ORD-{uuid.uuid4().hex[:8].upper()}"
 
-        # Create orders
+        # Create order
         order = Order(
             order_number=order_number,
             user_id=session.get('user_id'),
@@ -399,18 +494,29 @@ def place_order():
         )
 
         db.session.add(order)
-        db.session.flush()  # Get orders ID
+        db.session.flush()  # Get order ID
 
-        # Create orders items
+        # Create order items
         for item in items:
+            # Get product from database
             product = Product.query.get(item.get('id'))
+
+            if not product:
+                raise Exception(f"Product '{item.get('name')}' is no longer available")
+
+            if not product.is_active:
+                raise Exception(f"Product '{product.name}' is no longer available")
+
+            # Check stock availability
+            if product.stock_quantity < item.get('quantity'):
+                raise Exception(f"Insufficient stock for '{product.name}'. Only {product.stock_quantity} available.")
 
             order_item = OrderItem(
                 order_id=order.id,
-                product_id=item.get('id'),
-                product_name=item.get('name'),
-                product_sku=product.sku if product else None,
-                product_image=item.get('image'),
+                product_id=product.id,
+                product_name=product.name,
+                product_sku=product.sku,
+                product_image=product.image_url,  # Changed to image_url
                 price=item.get('price'),
                 quantity=item.get('quantity'),
                 subtotal=item.get('price') * item.get('quantity')
@@ -418,8 +524,7 @@ def place_order():
             db.session.add(order_item)
 
             # Update product stock
-            if product:
-                product.stock_quantity -= item.get('quantity')
+            product.stock_quantity -= item.get('quantity')
 
         db.session.commit()
 
@@ -457,7 +562,7 @@ def place_order():
         mail = Mail(app)
 
         msg = Message(f'Order Confirmation - {order_number}', recipients=[email])
-        msg.body = f'Thank you for your orders! Order number: {order_number}'
+        msg.body = f'Thank you for your order! Order number: {order_number}'
         message_html = render_template('mail/invoice.html',
                                        name=name,
                                        email=email,
@@ -483,7 +588,7 @@ def place_order():
         app.logger.error(f'Order creation error: {str(e)}')
         return jsonify({
             'success': False,
-            'message': f'Error placing orders: {str(e)}'
+            'message': f'Error placing order: {str(e)}'
         }), 500
 
 
@@ -624,7 +729,11 @@ def payment_failed():
 # def internal_error(error):
 #     db.session.rollback()
 #     return render_template('errors/500.html'), 500
-
-
 if __name__ == '__main__':
+    with app.app_context():
+        # Create tables if they don't exist
+        db.create_all()
+        # Seed products into database
+        seed_products()
+
     app.run(debug=True)
