@@ -444,6 +444,70 @@ def place_order():
     from models.order import Order, OrderItem
     from models.product import Product
     import uuid
+    import traceback
+    import threading
+
+    def send_notifications_async(order_number, name, email, phone, address, city, state, zip_code, country, items,
+                                 totals, bill_info, notes):
+        """Send email and telegram notifications in background"""
+        with app.app_context():
+            # Telegram
+            try:
+                table_data = []
+                for item in items:
+                    subtotal = item['price'] * item['quantity']
+                    table_data.append([item['name'], item['price'], item['quantity'], subtotal])
+
+                table_data.append(['SHIPPING', '', '', totals['shipping']])
+                table_data.append(['───────────────', '────────', '────────', '──────────'])
+                table_data.append(['TOTAL', '', '', totals['total']])
+
+                items_table = tabulate(table_data, headers=['Name', 'Price', 'Quantity', 'Subtotal'])
+
+                message_content = f"""<strong>🛒 NEW ORDER: {order_number}</strong>
+<strong>Customer Name: {name}</strong>
+<strong>Email: {email}</strong>
+<strong>Phone: {phone}</strong>
+<strong>Address: {address}, {city}, {state} {zip_code}, {country}</strong>
+<pre>{items_table}</pre>
+<strong>Status: PENDING APPROVAL</strong>
+"""
+                sendMessage('784362028', message_content)
+                print("✓ Telegram notification sent")
+            except Exception as e:
+                print(f"⚠ Telegram failed: {e}")
+
+            # Email
+            try:
+                from flask_mail import Mail, Message
+                import socket
+                socket.setdefaulttimeout(15)
+
+                app.config['MAIL_SERVER'] = 'smtp.gmail.com'
+                app.config['MAIL_PORT'] = 587
+                app.config['MAIL_USE_TLS'] = True
+                app.config['MAIL_USERNAME'] = 'kuaspvp1a@gmail.com'
+                app.config['MAIL_PASSWORD'] = 'ozeu mnmw tkfk bcny'
+                app.config['MAIL_DEFAULT_SENDER'] = 'kuaspvp1a@gmail.com'
+                mail = Mail(app)
+
+                msg = Message(f'Order Confirmation - {order_number}', recipients=[email])
+                msg.body = f'Thank you for your order! Order number: {order_number}'
+                message_html = render_template('mail/invoice.html',
+                                               name=name,
+                                               email=email,
+                                               phone=phone,
+                                               order_number=order_number,
+                                               address=f"{address}, {city}, {state} {zip_code}, {country}".strip(', '),
+                                               full_address=bill_info,
+                                               items=items,
+                                               totals=totals,
+                                               notes=notes)
+                msg.html = message_html
+                mail.send(msg)
+                print("✓ Email sent")
+            except Exception as e:
+                print(f"⚠ Email failed: {e}")
 
     order_data = request.get_json()
 
@@ -451,12 +515,8 @@ def place_order():
     totals = order_data.get('totals', {})
     bill_info = order_data.get('billing', {})
 
-    # Validate data
     if not items or not bill_info:
-        return jsonify({
-            'success': False,
-            'message': 'Invalid order data'
-        }), 400
+        return jsonify({'success': False, 'message': 'Invalid order data'}), 400
 
     name = bill_info.get('fullName', '')
     email = bill_info.get('email', '')
@@ -469,10 +529,8 @@ def place_order():
     notes = bill_info.get('notes', '')
 
     try:
-        # Generate unique order number
         order_number = f"ORD-{uuid.uuid4().hex[:8].upper()}"
 
-        # Create order
         order = Order(
             order_number=order_number,
             user_id=session.get('user_id'),
@@ -494,87 +552,44 @@ def place_order():
         )
 
         db.session.add(order)
-        db.session.flush()  # Get order ID
+        db.session.flush()
 
-        # Create order items
         for item in items:
-            # Get product from database
             product = Product.query.get(item.get('id'))
 
             if not product:
-                raise Exception(f"Product '{item.get('name')}' is no longer available")
+                raise Exception(f"Product ID {item.get('id')} not found")
 
             if not product.is_active:
                 raise Exception(f"Product '{product.name}' is no longer available")
 
-            # Check stock availability
             if product.stock_quantity < item.get('quantity'):
-                raise Exception(f"Insufficient stock for '{product.name}'. Only {product.stock_quantity} available.")
+                raise Exception(f"Insufficient stock for '{product.name}'")
 
             order_item = OrderItem(
                 order_id=order.id,
                 product_id=product.id,
                 product_name=product.name,
                 product_sku=product.sku,
-                product_image=product.image_url,  # Changed to image_url
-                price=item.get('price'),
+                product_image=product.image_url or item.get('image'),
+                price=float(item.get('price')),
                 quantity=item.get('quantity'),
-                subtotal=item.get('price') * item.get('quantity')
+                subtotal=float(item.get('price')) * item.get('quantity')
             )
             db.session.add(order_item)
-
-            # Update product stock
             product.stock_quantity -= item.get('quantity')
 
         db.session.commit()
+        print(f"✓ Order {order_number} created!")
 
-        # Send notifications (existing email/telegram code)
-        table_data = []
-        for item in items:
-            subtotal = item['price'] * item['quantity']
-            table_data.append([item['name'], item['price'], item['quantity'], subtotal])
-
-        table_data.append(['SHIPPING', '', '', totals['shipping']])
-        table_data.append(['───────────────', '────────', '────────', '──────────'])
-        table_data.append(['TOTAL', '', '', totals['total']])
-
-        items_table = tabulate(table_data, headers=['Name', 'Price', 'Quantity', 'Subtotal'])
-
-        message_content = f"""<strong>🛒 NEW ORDER: {order_number}</strong>
-<strong>Customer Name: {name}</strong>
-<strong>Email: {email}</strong>
-<strong>Phone: {phone}</strong>
-<strong>Address: {address}, {city}, {state} {zip_code}, {country}</strong>
-<pre>{items_table}</pre>
-<strong>Status: PENDING APPROVAL</strong>
-<strong>View Order: /admin/orders/{order.id}</strong>
-"""
-
-        print(sendMessage('784362028', message_content))
-
-        # Send email
-        app.config['MAIL_SERVER'] = 'smtp.gmail.com'
-        app.config['MAIL_PORT'] = 587
-        app.config['MAIL_USE_TLS'] = True
-        app.config['MAIL_USERNAME'] = 'kuaspvp1a@gmail.com'
-        app.config['MAIL_PASSWORD'] = 'ozeu mnmw tkfk bcny'
-        app.config['MAIL_DEFAULT_SENDER'] = 'kuaspvp1a@gmail.com'
-        mail = Mail(app)
-
-        msg = Message(f'Order Confirmation - {order_number}', recipients=[email])
-        msg.body = f'Thank you for your order! Order number: {order_number}'
-        message_html = render_template('mail/invoice.html',
-                                       name=name,
-                                       email=email,
-                                       phone=phone,
-                                       order_number=order_number,
-                                       address=f"{address}, {city}, {state} {zip_code}, {country}".strip(', '),
-                                       full_address=bill_info,
-                                       items=items,
-                                       totals=totals,
-                                       notes=notes)
-        msg.html = message_html
-        mail.send(msg)
+        # Send notifications in background thread
+        thread = threading.Thread(
+            target=send_notifications_async,
+            args=(
+            order_number, name, email, phone, address, city, state, zip_code, country, items, totals, bill_info, notes)
+        )
+        thread.daemon = True
+        thread.start()
 
         return jsonify({
             'success': True,
@@ -585,7 +600,7 @@ def place_order():
 
     except Exception as e:
         db.session.rollback()
-        app.logger.error(f'Order creation error: {str(e)}')
+        print(f"❌ ERROR: {str(e)}")
         return jsonify({
             'success': False,
             'message': f'Error placing order: {str(e)}'
